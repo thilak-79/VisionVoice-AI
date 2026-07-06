@@ -1,694 +1,289 @@
-\# VisionVoice AI
+# VisionVoice AI
 
+<p align="center">
+  <b>A Python-based voice, vision, and automation desktop assistant inspired by JARVIS.</b>
+</p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-blue" />
+  <img src="https://img.shields.io/badge/OpenCV-Computer%20Vision-green" />
+  <img src="https://img.shields.io/badge/SQLite-Memory-lightgrey" />
+  <img src="https://img.shields.io/badge/Status-In%20Development-orange" />
+</p>
 
-\*\*VisionVoice AI\*\* is a Python-based personal desktop assistant inspired by JARVIS.  
+---
 
-It supports text commands, voice commands, app launching, web search, task memory, camera access, and project automation.
+## Overview
 
+**VisionVoice AI** is a personal desktop assistant built with Python.  
+It can understand text or voice commands, open applications, search the web, remember tasks, access the camera, and launch other projects.
 
+This project is developed as a practical AI/automation portfolio project focusing on:
 
-This project is designed as a practical AI/automation portfolio project for learning:
+- Voice-based human-computer interaction
+- Desktop automation
+- Task memory using SQLite
+- Basic computer vision integration
+- Natural language command handling
 
+---
 
+## Features
 
-\- Python automation
+| Feature | Status |
+|---|---|
+| Text command mode | Done |
+| Voice command mode | Done |
+| Text-to-speech replies | Done |
+| Open desktop apps | Done |
+| Google search | Done |
+| YouTube search | Done |
+| Task memory using SQLite | Done |
+| Show and clear saved tasks | Done |
+| Camera access using OpenCV | Done |
+| Launch external Python projects | Done |
+| AI chatbot integration | Planned |
+| PDF summarizer | Planned |
+| GUI dashboard | Planned |
 
-\- Speech recognition
+---
 
-\- Text-to-speech
-
-\- Computer vision basics
-
-\- SQLite memory storage
-
-\- Human-computer interaction
-
-
-
-\---
-
-
-
-\## Features
-
-
-
-\### Current Features
-
-
-
-\- Text command mode
-
-\- Voice command mode
-
-\- Text-to-speech replies
-
-\- Natural language command handling
-
-\- Open desktop applications
-
-&#x20; - Calculator
-
-&#x20; - Notepad
-
-&#x20; - Chrome
-
-&#x20; - VS Code
-
-&#x20; - PowerShell
-
-&#x20; - Command Prompt
-
-\- Google search
-
-\- YouTube search
-
-\- Save tasks/reminders using SQLite
-
-\- Show saved tasks
-
-\- Clear saved tasks
-
-\- Open webcam using OpenCV
-
-\- Launch external projects such as the hand-controlled AR flower project
-
-
-
-\---
-
-
-
-\## Example Commands
-
-
+## Example Commands
 
 ```text
-
 jarvis hello
-
 jarvis what time is it
-
-jarvis tell me the current time
-
 jarvis what is today's date
-
 jarvis open calculator
-
-jarvis launch calculator
-
-jarvis start calculator
-
+jarvis launch chrome
 jarvis open vs code
-
-jarvis open chrome
-
 jarvis search google for Python tutorial
-
 jarvis search YouTube for OpenCV hand tracking
-
 jarvis remember submit database lab tomorrow
-
 jarvis show tasks
-
 jarvis clear tasks
-
 jarvis open camera
-
 jarvis start flower project
-
 jarvis exit
-
 ```
 
+---
 
-
-\---
-
-
-
-\## Project Architecture
-
-
+## Project Architecture
 
 ```text
-
-User Command
-
-&#x20;   |
-
-&#x20;   v
-
-Text Mode / Voice Mode
-
-&#x20;   |
-
-&#x20;   v
-
-Command Cleaning and Natural Language Processing
-
-&#x20;   |
-
-&#x20;   v
-
-Intent Detection
-
-&#x20;   |
-
-&#x20;   +--> Open Apps
-
-&#x20;   +--> Search Google
-
-&#x20;   +--> Search YouTube
-
-&#x20;   +--> Save Tasks
-
-&#x20;   +--> Show Tasks
-
-&#x20;   +--> Open Camera
-
-&#x20;   +--> Launch Projects
-
-&#x20;   |
-
-&#x20;   v
-
+User Input
+   |
+   |-- Text Command
+   |-- Voice Command
+   |
+   v
+Command Processing
+   |
+   v
+Natural Language Intent Detection
+   |
+   |-- Open Application
+   |-- Search Web
+   |-- Save Task
+   |-- Show Tasks
+   |-- Open Camera
+   |-- Launch Project
+   |
+   v
 Text-to-Speech Response
-
 ```
 
+---
 
-
-\---
-
-
-
-\## Tech Stack
-
-
+## Tech Stack
 
 | Component | Technology |
-
 |---|---|
-
 | Programming Language | Python |
-
-| Voice Recognition | SpeechRecognition |
-
+| Speech Recognition | SpeechRecognition |
 | Text-to-Speech | pyttsx3 |
-
-| Camera Access | OpenCV |
-
-| Memory Storage | SQLite |
-
+| Computer Vision | OpenCV |
+| Database | SQLite |
 | Automation | subprocess, os, webbrowser |
-
 | Interface | Terminal / PowerShell |
 
+---
 
-
-\---
-
-
-
-\## Project Structure
-
-
+## Project Structure
 
 ```text
-
 VisionVoice-AI/
-
 │
-
 ├── jarvis.py
-
 ├── README.md
-
 ├── requirements.txt
-
 ├── .gitignore
-
-│
-
-└── jarvis\_memory.db        # Local database, ignored by Git
-
+└── jarvis_memory.db    # Local database, ignored by Git
 ```
 
+---
 
+## Installation
 
-Recommended files to ignore:
-
-
-
-```text
-
-venv/
-
-\_\_pycache\_\_/
-
-\*.pyc
-
-.env
-
-jarvis\_memory.db
-
-.vscode/
-
-```
-
-
-
-\---
-
-
-
-\## Installation
-
-
-
-\### 1. Clone the Repository
-
-
+### 1. Clone the repository
 
 ```bash
-
 git clone https://github.com/thilak-79/VisionVoice-AI.git
-
 cd VisionVoice-AI
-
 ```
 
-
-
-\### 2. Create Virtual Environment
-
-
+### 2. Create a virtual environment
 
 ```bash
-
 python -m venv venv
-
 ```
 
-
-
-\### 3. Activate Virtual Environment
-
-
+### 3. Activate the virtual environment
 
 For Windows PowerShell:
 
-
-
 ```powershell
-
-.\\venv\\Scripts\\Activate.ps1
-
+.\venv\Scripts\Activate.ps1
 ```
-
-
 
 For Command Prompt:
 
-
-
 ```cmd
-
-venv\\Scripts\\activate.bat
-
+venv\Scripts\activate.bat
 ```
 
-
-
-\### 4. Install Required Packages
-
-
+### 4. Install dependencies
 
 ```bash
-
 pip install -r requirements.txt
-
 ```
 
-
-
-If `pyaudio` gives installation errors, install the basic packages first:
-
-
+If PyAudio gives an error, install the basic packages first:
 
 ```bash
-
 pip install pyttsx3 SpeechRecognition opencv-python
-
 ```
 
+---
 
-
-Then try:
-
-
+## How to Run
 
 ```bash
-
-pip install pyaudio
-
-```
-
-
-
-\---
-
-
-
-\## How to Run
-
-
-
-```bash
-
 python jarvis.py
-
 ```
 
-
-
-Then choose a mode:
-
-
+Then select a mode:
 
 ```text
-
-1\. Text mode
-
-2\. Voice mode
-
+1. Text mode
+2. Voice mode
 ```
 
+For first-time testing, use **Text mode**.
 
+---
 
-For first-time testing, use \*\*Text mode\*\*.
+## Main Functions
 
+### App Launcher
 
-
-\---
-
-
-
-\## Voice Mode
-
-
-
-Voice mode allows you to speak commands such as:
-
-
+VisionVoice AI can open common desktop applications:
 
 ```text
-
-Jarvis open calculator
-
-Jarvis what time is it
-
-Jarvis search YouTube for Python tutorial
-
-Jarvis remember finish lab report
-
+jarvis open calculator
+jarvis open notepad
+jarvis open chrome
+jarvis open vs code
+jarvis open powershell
 ```
 
+### Web Search
 
+```text
+jarvis search google for Python tutorial
+jarvis search YouTube for MediaPipe hand tracking
+```
 
-Make sure your microphone is connected and working.
+### Task Memory
 
+```text
+jarvis remember submit lab tomorrow
+jarvis show tasks
+jarvis clear tasks
+```
 
+Tasks are saved locally using SQLite.
 
-\---
+### Camera Mode
 
+```text
+jarvis open camera
+```
 
+Press `q` to close the camera window.
 
-\## Task Memory
+### Project Launcher
 
-
-
-VisionVoice AI uses SQLite to save simple tasks.
-
-
+VisionVoice AI can launch other Python projects.
 
 Example:
 
-
-
 ```text
-
-jarvis remember submit CO2050 lab tomorrow
-
-```
-
-
-
-Show saved tasks:
-
-
-
-```text
-
-jarvis show tasks
-
-```
-
-
-
-Clear saved tasks:
-
-
-
-```text
-
-jarvis clear tasks
-
-```
-
-
-
-The task database is stored locally in:
-
-
-
-```text
-
-jarvis\_memory.db
-
-```
-
-
-
-This file is ignored by Git to keep personal data private.
-
-
-
-\---
-
-
-
-\## Camera Mode
-
-
-
-Open camera:
-
-
-
-```text
-
-jarvis open camera
-
-```
-
-
-
-Close the camera window by pressing:
-
-
-
-```text
-
-q
-
-```
-
-
-
-\---
-
-
-
-\## External Project Launcher
-
-
-
-VisionVoice AI can launch another Python project, such as a hand-controlled AR flower project.
-
-
-
-Example command:
-
-
-
-```text
-
 jarvis start flower project
-
 ```
 
-
-
-In the code, update these paths according to your computer:
-
-
+Update the project path inside `jarvis.py`:
 
 ```python
-
-FLOWER\_PROJECT\_PATH = r"C:\\Users\\Master\\Music\\flower"
-
-FLOWER\_FILE\_NAME = "start.py"
-
+FLOWER_PROJECT_PATH = r"C:\Users\Master\Music\flower"
+FLOWER_FILE_NAME = "start.py"
 ```
 
+---
 
+## Roadmap
 
-\---
+Future improvements:
 
+- Add AI chatbot responses
+- Add PDF reading and summarization
+- Add local file search
+- Add reminder notifications
+- Add GUI dashboard
+- Add object detection using YOLO
+- Add hand gesture control using MediaPipe
+- Add smart home / IoT control
+- Add user authentication for sensitive commands
 
+---
 
-\## Roadmap
+## Safety Notes
 
-
-
-Planned improvements:
-
-
-
-\- Better natural language understanding
-
-\- AI chatbot integration
-
-\- PDF reading and lecture summarization
-
-\- Local file search
-
-\- Reminder notifications
-
-\- Gesture control using MediaPipe
-
-\- Object detection using YOLO
-
-\- Futuristic desktop dashboard
-
-\- Smart home / IoT control using ESP32
-
-\- User authentication for sensitive commands
-
-
-
-\---
-
-
-
-\## Future Advanced Version
-
-
-
-The final goal is to build a multimodal assistant with:
-
-
-
-```text
-
-Voice Input
-
-Text Input
-
-Computer Vision
-
-Local Memory
-
-AI Question Answering
-
-Project Automation
-
-Desktop Control
-
-```
-
-
-
-Possible final title:
-
-
-
-> VisionVoice AI: A Voice, Vision, and Automation-Based Personal Desktop Assistant
-
-
-
-\---
-
-
-
-\## Safety Notes
-
-
-
-This assistant is intended only for personal productivity and learning.
-
-
+This assistant is designed for personal productivity and learning.
 
 It should not be used for:
 
+- Unauthorized access
+- Hidden recording
+- Spying
+- Deleting important files without confirmation
+- Unsafe device control
 
+Dangerous actions should always ask for confirmation first.
 
-\- Unauthorized access
+---
 
-\- Hidden recording
+## Author
 
-\- Spying
-
-\- Deleting important files without confirmation
-
-\- Controlling unsafe physical devices
-
-
-
-Always add confirmation before dangerous actions such as deleting files or shutting down the computer.
-
-
-
-\---
-
-
-
-\## Author
-
-
-
-\*\*Thilakshan Ravichandran\*\*  
-
+**Thilakshan Ravichandran**  
 Computer Engineering Undergraduate  
+University of Peradeniya  
 
-University of Peradeniya
+GitHub: [thilak-79](https://github.com/thilak-79)
 
+---
 
+## License
 
-GitHub: \[thilak-79](https://github.com/thilak-79)
-
-
-
-\---
-
-
-
-\## License
-
-
-
-This project is open-source and available for learning and educational use.
-
+This project is open-source and available for educational and learning purposes.
