@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+jarvis_memory.db
+.DS_Store
+.vscode/
