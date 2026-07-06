@@ -6,6 +6,19 @@ import subprocess
 import webbrowser
 
 try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
+if load_dotenv is not None:
+    load_dotenv()
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+try:
     import pyttsx3
 except ImportError:
     pyttsx3 = None
@@ -27,6 +40,16 @@ FLOWER_FILE_NAME = "start.py"
 
 DB_FILE = "jarvis_memory.db"
 
+USE_AI_BRAIN = True
+AI_PROVIDER = "openrouter"
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+OPENROUTER_MAX_TOKENS = int(os.getenv("OPENROUTER_MAX_TOKENS", "700"))
+AI_MAX_SPEAK_CHARS = 700
+
 
 # -----------------------------
 # NATURAL LANGUAGE WORD GROUPS
@@ -34,14 +57,6 @@ DB_FILE = "jarvis_memory.db"
 
 OPEN_WORDS = [
     "open", "launch", "start", "run", "execute", "turn on", "bring up"
-]
-
-SEARCH_WORDS = [
-    "search", "find", "look up", "google"
-]
-
-YOUTUBE_WORDS = [
-    "youtube", "yt"
 ]
 
 TIME_WORDS = [
@@ -76,6 +91,29 @@ HELP_WORDS = [
     "help", "what can you do", "commands", "show commands", "how can you help"
 ]
 
+AI_TRIGGER_WORDS = [
+    "explain",
+    "teach",
+    "what is",
+    "what are",
+    "how to",
+    "how do",
+    "why",
+    "write",
+    "generate",
+    "give me",
+    "solve",
+    "summarize",
+    "compare",
+    "difference between",
+    "idea",
+    "project idea",
+    "answer",
+    "describe",
+    "define",
+    "make",
+    "create"
+]
 
 APP_ALIASES = {
     "notepad": ["notepad", "text editor"],
@@ -88,35 +126,57 @@ APP_ALIASES = {
 }
 
 
+
 # -----------------------------
 # TEXT TO SPEECH
 # -----------------------------
 
-def init_speaker():
-    if pyttsx3 is None:
-        return None
-
-    engine = pyttsx3.init()
-    engine.setProperty("rate", 170)
-    engine.setProperty("volume", 1.0)
-
-    voices = engine.getProperty("voices")
-    if voices:
-        engine.setProperty("voice", voices[0].id)
-
-    return engine
-
-
-speaker = init_speaker()
+VOICE_ENABLED = True
 
 
 def speak(text):
+    """
+    Stable JARVIS voice output.
+    This creates a fresh pyttsx3 engine each time to avoid silent voice issues.
+    """
     print(f"JARVIS: {text}")
 
-    if speaker is not None:
-        speaker.say(text)
-        speaker.runAndWait()
+    if not VOICE_ENABLED:
+        return
 
+    if pyttsx3 is None:
+        print("pyttsx3 is not installed. Voice output disabled.")
+        return
+
+    try:
+        engine = pyttsx3.init("sapi5")  # Windows speech engine
+
+        engine.setProperty("rate", 165)
+        engine.setProperty("volume", 1.0)
+
+        voices = engine.getProperty("voices")
+
+        # Prefer common Windows English voices
+        if voices:
+            selected_voice = None
+
+            for voice in voices:
+                name = voice.name.lower()
+                if "david" in name or "zira" in name:
+                    selected_voice = voice.id
+                    break
+
+            if selected_voice is None:
+                selected_voice = voices[0].id
+
+            engine.setProperty("voice", selected_voice)
+
+        engine.say(str(text))
+        engine.runAndWait()
+        engine.stop()
+
+    except Exception as e:
+        print("Text-to-speech error:", e)
 
 # -----------------------------
 # DATABASE MEMORY
@@ -226,13 +286,10 @@ def listen_voice():
 def normalize_text(text):
     text = text.lower().strip()
 
-    text = text.replace("?", " ")
-    text = text.replace(".", " ")
-    text = text.replace(",", " ")
-    text = text.replace("!", " ")
+    for symbol in ["?", ".", ",", "!", ";", ":"]:
+        text = text.replace(symbol, " ")
 
     text = re.sub(r"\s+", " ", text)
-
     return text.strip()
 
 
@@ -257,12 +314,16 @@ def clean_command(command):
         command = command.replace(word, " ")
 
     command = re.sub(r"\s+", " ", command)
-
     return command.strip()
 
 
+def contains_phrase(command, phrase):
+    pattern = r"\b" + re.escape(phrase) + r"\b"
+    return re.search(pattern, command) is not None
+
+
 def contains_any(command, words):
-    return any(word in command for word in words)
+    return any(contains_phrase(command, word) for word in words)
 
 
 def is_exit_command(command):
@@ -282,7 +343,18 @@ def is_greeting(command):
 
 
 def is_time_command(command):
-    return contains_any(command, TIME_WORDS)
+    if "time complexity" in command:
+        return False
+
+    time_phrases = [
+        "time",
+        "current time",
+        "what time",
+        "tell me time",
+        "clock"
+    ]
+
+    return contains_any(command, time_phrases)
 
 
 def is_date_command(command):
@@ -296,7 +368,7 @@ def is_open_intent(command):
 def detect_app(command):
     for app_name, aliases in APP_ALIASES.items():
         for alias in aliases:
-            if alias in command:
+            if contains_phrase(command, alias):
                 return app_name
 
     return None
@@ -311,21 +383,17 @@ def remove_words(text, words):
 
 
 def extract_google_query(command):
-    query = command
-
     remove_list = [
         "search google for", "search on google for", "search in google for",
         "google search for", "google for", "search for", "look up",
         "find", "search", "google", "on google", "in google"
     ]
 
-    query = remove_words(query, remove_list)
+    query = remove_words(command, remove_list)
     return query.strip()
 
 
 def extract_youtube_query(command):
-    query = command
-
     remove_list = [
         "search youtube for", "search on youtube for", "search in youtube for",
         "youtube search for", "search yt for", "yt search for",
@@ -333,13 +401,11 @@ def extract_youtube_query(command):
         "on youtube", "in youtube"
     ]
 
-    query = remove_words(query, remove_list)
+    query = remove_words(command, remove_list)
     return query.strip()
 
 
 def extract_task_text(command):
-    task = command
-
     remove_list = [
         "remember that", "remember to", "remember",
         "save that", "save this", "save",
@@ -350,8 +416,7 @@ def extract_task_text(command):
         "keep in memory that", "keep in memory"
     ]
 
-    task = remove_words(task, remove_list)
-
+    task = remove_words(command, remove_list)
     return task.strip()
 
 
@@ -369,7 +434,7 @@ def is_remember_command(command):
 
 def is_camera_command(command):
     if "camera" in command or "webcam" in command:
-        if is_open_intent(command) or "look" in command or "show" in command:
+        if is_open_intent(command) or contains_any(command, ["look", "show"]):
             return True
 
     if command in ["camera", "webcam"]:
@@ -379,13 +444,44 @@ def is_camera_command(command):
 
 
 def is_flower_project_command(command):
-    has_flower = "flower" in command or "hand flower" in command or "gesture flower" in command
-    has_project = "project" in command or "program" in command or "app" in command
+    has_flower = (
+        "flower" in command
+        or "hand flower" in command
+        or "gesture flower" in command
+    )
+
+    has_project = (
+        "project" in command
+        or "program" in command
+        or "app" in command
+    )
 
     if has_flower and (is_open_intent(command) or has_project):
         return True
 
     return False
+
+
+def is_youtube_search(command):
+    return contains_any(command, ["youtube", "yt"])
+
+
+def is_google_search(command):
+    if contains_phrase(command, "google"):
+        return True
+
+    search_phrases = [
+        "search for",
+        "search about",
+        "look up",
+        "find about"
+    ]
+
+    return contains_any(command, search_phrases)
+
+
+def is_ai_command(command):
+    return contains_any(command, AI_TRIGGER_WORDS)
 
 
 # -----------------------------
@@ -522,6 +618,88 @@ def open_camera():
 
 
 # -----------------------------
+# OPENROUTER AI BRAIN
+# -----------------------------
+
+def ask_ai_brain(user_question):
+    if OpenAI is None:
+        speak("OpenAI package is not installed. Run pip install openai.")
+        return
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+
+    if not api_key:
+        speak("OpenRouter API key was not found. Please add it to your .env file.")
+        return
+
+    try:
+        speak("Thinking...")
+
+        client = OpenAI(
+            base_url=OPENROUTER_BASE_URL,
+            api_key=api_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/thilak-79/VisionVoice-AI",
+                "X-OpenRouter-Title": "VisionVoice AI"
+            }
+        )
+
+        system_prompt = """
+You are VisionVoice AI, a helpful desktop assistant for a Computer Engineering undergraduate.
+
+Rules:
+- Answer clearly and simply.
+- Use step-by-step explanations for programming, databases, computer architecture, electronics, AI, ML, and computer vision.
+- Keep answers short unless the user asks for a detailed explanation.
+- Do not claim you opened apps, changed files, sent emails, or controlled the computer unless the Python program actually executed that action.
+- When the user asks for code, provide clean and runnable code.
+"""
+
+        response = client.chat.completions.create(
+           model=OPENROUTER_MODEL,
+           messages=[
+               {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_question
+                }
+            ],
+            temperature=0.4,
+            max_tokens=OPENROUTER_MAX_TOKENS
+)
+
+        answer = response.choices[0].message.content.strip()
+
+        print("\nAI ANSWER:")
+        print(answer)
+        print()
+
+        if answer:
+            speak(answer[:AI_MAX_SPEAK_CHARS])
+        else:
+            speak("I received an empty answer from the AI model.")
+
+    except Exception as e:
+        error_text = str(e).lower()
+
+        if "no auth credentials" in error_text or "401" in error_text or "unauthorized" in error_text:
+            speak("Your OpenRouter API key is missing or invalid. Please check your .env file.")
+        elif "insufficient" in error_text or "credits" in error_text or "402" in error_text:
+            speak("Your OpenRouter credits may be finished. Please check your OpenRouter account.")
+        elif "rate" in error_text or "429" in error_text:
+            speak("The OpenRouter rate limit was reached. Please wait and try again.")
+        elif "model" in error_text and "not" in error_text:
+            speak("The selected OpenRouter model is not available. Please change OPENROUTER_MODEL in your .env file.")
+        else:
+            speak("I could not connect to OpenRouter. Check your API key, internet connection, model name, and credits.")
+
+        print(e)
+
+
+# -----------------------------
 # COMMAND BRAIN
 # -----------------------------
 
@@ -548,26 +726,14 @@ def process_command(raw_command):
         speak("Hello. I am ready.")
         return True
 
-    # Camera must be checked before normal app opening
+    # Camera
     if is_camera_command(command):
         open_camera()
         return True
 
-    # Flower project must be checked before normal app opening
+    # Flower project
     if is_flower_project_command(command):
         start_flower_project()
-        return True
-
-    # YouTube search
-    if "youtube" in command or "yt" in command:
-        query = extract_youtube_query(command)
-        search_youtube(query)
-        return True
-
-    # Google search
-    if "google" in command or contains_any(command, ["search", "look up", "find"]):
-        query = extract_google_query(command)
-        search_google(query)
         return True
 
     # Time and date
@@ -610,6 +776,18 @@ def process_command(raw_command):
         speak("All tasks cleared.")
         return True
 
+    # YouTube search
+    if is_youtube_search(command):
+        query = extract_youtube_query(command)
+        search_youtube(query)
+        return True
+
+    # Google search
+    if is_google_search(command):
+        query = extract_google_query(command)
+        search_google(query)
+        return True
+
     # Open apps naturally
     if is_open_intent(command):
         app_name = detect_app(command)
@@ -621,14 +799,23 @@ def process_command(raw_command):
 
         return True
 
-    # Direct app names also work
+    # AI brain commands
+    if USE_AI_BRAIN and is_ai_command(command):
+        ask_ai_brain(command)
+        return True
+
+    # Direct app names
     app_name = detect_app(command)
     if app_name:
         speak(f"Do you want me to open {app_name}? Say open {app_name}.")
         return True
 
     # Fallback
-    speak("I do not understand that command yet.")
+    if USE_AI_BRAIN:
+        ask_ai_brain(command)
+    else:
+        speak("I do not understand that command yet.")
+
     return True
 
 
@@ -662,8 +849,11 @@ Natural commands you can try:
 24. jarvis show tasks
 25. jarvis what are my tasks
 26. jarvis clear tasks
-27. jarvis what can you do
-28. jarvis exit
+27. jarvis explain Dijkstra algorithm
+28. jarvis write SQL query for students table
+29. jarvis give me computer vision project ideas
+30. jarvis what can you do
+31. jarvis exit
 """)
 
     speak("I printed the natural command list.")
