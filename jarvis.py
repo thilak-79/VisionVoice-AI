@@ -1,5 +1,5 @@
 import os
-import sys
+import re
 import sqlite3
 import datetime
 import subprocess
@@ -26,6 +26,66 @@ FLOWER_PROJECT_PATH = r"C:\Users\Master\Music\flower"
 FLOWER_FILE_NAME = "start.py"
 
 DB_FILE = "jarvis_memory.db"
+
+
+# -----------------------------
+# NATURAL LANGUAGE WORD GROUPS
+# -----------------------------
+
+OPEN_WORDS = [
+    "open", "launch", "start", "run", "execute", "turn on", "bring up"
+]
+
+SEARCH_WORDS = [
+    "search", "find", "look up", "google"
+]
+
+YOUTUBE_WORDS = [
+    "youtube", "yt"
+]
+
+TIME_WORDS = [
+    "time", "clock", "current time"
+]
+
+DATE_WORDS = [
+    "date", "day", "today"
+]
+
+REMEMBER_WORDS = [
+    "remember", "save", "note", "note down", "add task", "add a task",
+    "create task", "store", "keep in memory"
+]
+
+SHOW_TASK_WORDS = [
+    "show tasks", "list tasks", "display tasks", "read tasks",
+    "what are my tasks", "show my tasks", "list my tasks",
+    "show reminders", "list reminders", "show memory", "what did you remember"
+]
+
+CLEAR_TASK_WORDS = [
+    "clear tasks", "delete tasks", "remove tasks", "clear all tasks",
+    "delete all tasks", "clear memory", "delete memory"
+]
+
+EXIT_WORDS = [
+    "exit", "quit", "stop", "shutdown", "close jarvis", "bye", "goodbye"
+]
+
+HELP_WORDS = [
+    "help", "what can you do", "commands", "show commands", "how can you help"
+]
+
+
+APP_ALIASES = {
+    "notepad": ["notepad", "text editor"],
+    "calculator": ["calculator", "calc"],
+    "chrome": ["chrome", "google chrome", "browser"],
+    "vs code": ["vs code", "visual studio code", "vscode", "code editor"],
+    "cmd": ["cmd", "command prompt"],
+    "powershell": ["powershell", "terminal"],
+    "camera": ["camera", "webcam"],
+}
 
 
 # -----------------------------
@@ -160,6 +220,175 @@ def listen_voice():
 
 
 # -----------------------------
+# NATURAL LANGUAGE HELPERS
+# -----------------------------
+
+def normalize_text(text):
+    text = text.lower().strip()
+
+    text = text.replace("?", " ")
+    text = text.replace(".", " ")
+    text = text.replace(",", " ")
+    text = text.replace("!", " ")
+
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+
+def clean_command(command):
+    command = normalize_text(command)
+
+    if command.startswith(WAKE_WORD):
+        command = command.replace(WAKE_WORD, "", 1).strip()
+
+    polite_words = [
+        "please",
+        "can you",
+        "could you",
+        "would you",
+        "for me",
+        "now",
+        "just",
+        "kindly"
+    ]
+
+    for word in polite_words:
+        command = command.replace(word, " ")
+
+    command = re.sub(r"\s+", " ", command)
+
+    return command.strip()
+
+
+def contains_any(command, words):
+    return any(word in command for word in words)
+
+
+def is_exit_command(command):
+    return command in EXIT_WORDS or contains_any(command, EXIT_WORDS)
+
+
+def is_help_command(command):
+    return contains_any(command, HELP_WORDS)
+
+
+def is_greeting(command):
+    greetings = [
+        "hello", "hi", "hey", "good morning", "good afternoon",
+        "good evening", "are you there"
+    ]
+    return contains_any(command, greetings)
+
+
+def is_time_command(command):
+    return contains_any(command, TIME_WORDS)
+
+
+def is_date_command(command):
+    return contains_any(command, DATE_WORDS)
+
+
+def is_open_intent(command):
+    return contains_any(command, OPEN_WORDS)
+
+
+def detect_app(command):
+    for app_name, aliases in APP_ALIASES.items():
+        for alias in aliases:
+            if alias in command:
+                return app_name
+
+    return None
+
+
+def remove_words(text, words):
+    for word in words:
+        text = text.replace(word, " ")
+
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def extract_google_query(command):
+    query = command
+
+    remove_list = [
+        "search google for", "search on google for", "search in google for",
+        "google search for", "google for", "search for", "look up",
+        "find", "search", "google", "on google", "in google"
+    ]
+
+    query = remove_words(query, remove_list)
+    return query.strip()
+
+
+def extract_youtube_query(command):
+    query = command
+
+    remove_list = [
+        "search youtube for", "search on youtube for", "search in youtube for",
+        "youtube search for", "search yt for", "yt search for",
+        "youtube", "yt", "search for", "search", "look up", "find",
+        "on youtube", "in youtube"
+    ]
+
+    query = remove_words(query, remove_list)
+    return query.strip()
+
+
+def extract_task_text(command):
+    task = command
+
+    remove_list = [
+        "remember that", "remember to", "remember",
+        "save that", "save this", "save",
+        "note down that", "note down", "note that", "note",
+        "add a task to", "add task to", "add a task", "add task",
+        "create a task", "create task",
+        "store that", "store this", "store",
+        "keep in memory that", "keep in memory"
+    ]
+
+    task = remove_words(task, remove_list)
+
+    return task.strip()
+
+
+def is_show_tasks_command(command):
+    return contains_any(command, SHOW_TASK_WORDS)
+
+
+def is_clear_tasks_command(command):
+    return contains_any(command, CLEAR_TASK_WORDS)
+
+
+def is_remember_command(command):
+    return contains_any(command, REMEMBER_WORDS)
+
+
+def is_camera_command(command):
+    if "camera" in command or "webcam" in command:
+        if is_open_intent(command) or "look" in command or "show" in command:
+            return True
+
+    if command in ["camera", "webcam"]:
+        return True
+
+    return False
+
+
+def is_flower_project_command(command):
+    has_flower = "flower" in command or "hand flower" in command or "gesture flower" in command
+    has_project = "project" in command or "program" in command or "app" in command
+
+    if has_flower and (is_open_intent(command) or has_project):
+        return True
+
+    return False
+
+
+# -----------------------------
 # APP / SYSTEM ACTIONS
 # -----------------------------
 
@@ -167,31 +396,31 @@ def open_app(app_name):
     app_name = app_name.lower()
 
     try:
-        if "notepad" in app_name:
+        if app_name == "notepad":
             subprocess.Popen("notepad")
             speak("Opening Notepad.")
 
-        elif "calculator" in app_name or "calc" in app_name:
+        elif app_name == "calculator":
             subprocess.Popen("calc")
             speak("Opening Calculator.")
 
-        elif "chrome" in app_name:
+        elif app_name == "chrome":
             subprocess.Popen("start chrome", shell=True)
             speak("Opening Chrome.")
 
-        elif "vs code" in app_name or "visual studio code" in app_name or "code" in app_name:
+        elif app_name == "vs code":
             subprocess.Popen("code", shell=True)
             speak("Opening Visual Studio Code.")
 
-        elif "cmd" in app_name or "command prompt" in app_name:
+        elif app_name == "cmd":
             subprocess.Popen("start cmd", shell=True)
             speak("Opening Command Prompt.")
 
-        elif "powershell" in app_name:
+        elif app_name == "powershell":
             subprocess.Popen("start powershell", shell=True)
             speak("Opening PowerShell.")
 
-        elif "camera" in app_name:
+        elif app_name == "camera":
             open_camera()
 
         else:
@@ -247,8 +476,7 @@ def start_flower_project():
         command = f'cd "{FLOWER_PROJECT_PATH}"; python {FLOWER_FILE_NAME}'
 
         subprocess.Popen(
-            ["powershell", "-NoExit", "-Command", command],
-            shell=True
+            ["powershell", "-NoExit", "-Command", command]
         )
 
         speak("Starting your hand controlled flower project.")
@@ -297,15 +525,6 @@ def open_camera():
 # COMMAND BRAIN
 # -----------------------------
 
-def clean_command(command):
-    command = command.lower().strip()
-
-    if command.startswith(WAKE_WORD):
-        command = command.replace(WAKE_WORD, "", 1).strip()
-
-    return command
-
-
 def process_command(raw_command):
     command = clean_command(raw_command)
 
@@ -315,59 +534,54 @@ def process_command(raw_command):
     print(f"Processing: {command}")
 
     # Exit
-    if command in ["exit", "quit", "stop", "shutdown"]:
+    if is_exit_command(command):
         speak("Shutting down. Goodbye.")
         return False
 
+    # Help
+    if is_help_command(command):
+        show_help()
+        return True
+
     # Greetings
-    elif "hello" in command or "hi" in command:
+    if is_greeting(command):
         speak("Hello. I am ready.")
+        return True
 
-    # Time and date
-    elif "time" in command:
-        tell_time()
-
-    elif "date" in command or "day" in command:
-        tell_date()
-    
-    # Camera
-    elif "open camera" in command or "look at camera" in command or command == "camera":
+    # Camera must be checked before normal app opening
+    if is_camera_command(command):
         open_camera()
+        return True
 
-    # Open apps
-    elif command.startswith("open"):
-        app_name = command.replace("open", "", 1).strip()
-        open_app(app_name)
-
-    # Google search
-    elif command.startswith("search google for"):
-        query = command.replace("search google for", "", 1).strip()
-        search_google(query)
-
-    elif command.startswith("google"):
-        query = command.replace("google", "", 1).strip()
-        search_google(query)
+    # Flower project must be checked before normal app opening
+    if is_flower_project_command(command):
+        start_flower_project()
+        return True
 
     # YouTube search
-    elif command.startswith("search youtube for"):
-        query = command.replace("search youtube for", "", 1).strip()
+    if "youtube" in command or "yt" in command:
+        query = extract_youtube_query(command)
         search_youtube(query)
+        return True
 
-    elif command.startswith("youtube"):
-        query = command.replace("youtube", "", 1).strip()
-        search_youtube(query)
+    # Google search
+    if "google" in command or contains_any(command, ["search", "look up", "find"]):
+        query = extract_google_query(command)
+        search_google(query)
+        return True
 
-    # Flower project
-    elif "flower project" in command or "hand flower" in command:
-        start_flower_project()
+    # Time and date
+    if is_time_command(command):
+        tell_time()
+        return True
 
-    # Camera
-    elif "open camera" in command or "look at camera" in command or "camera" == command:
-        open_camera()
+    if is_date_command(command):
+        tell_date()
+        return True
 
     # Remember task
-    elif command.startswith("remember"):
-        task = command.replace("remember", "", 1).strip()
+    if is_remember_command(command):
+        task = extract_task_text(command)
 
         if task == "":
             speak("What should I remember?")
@@ -375,8 +589,10 @@ def process_command(raw_command):
             remember_task(task)
             speak("I remembered that.")
 
+        return True
+
     # Show tasks
-    elif "show tasks" in command or "list tasks" in command or "what are my tasks" in command:
+    if is_show_tasks_command(command):
         tasks = get_tasks()
 
         if not tasks:
@@ -386,43 +602,71 @@ def process_command(raw_command):
             for task_id, task, created_at in tasks:
                 print(f"{task_id}. {task}  [{created_at}]")
 
+        return True
+
     # Clear tasks
-    elif "clear tasks" in command or "delete tasks" in command:
+    if is_clear_tasks_command(command):
         clear_tasks()
         speak("All tasks cleared.")
+        return True
 
-    # Help
-    elif "help" in command or "what can you do" in command:
-        show_help()
+    # Open apps naturally
+    if is_open_intent(command):
+        app_name = detect_app(command)
+
+        if app_name:
+            open_app(app_name)
+        else:
+            speak("Which app should I open?")
+
+        return True
+
+    # Direct app names also work
+    app_name = detect_app(command)
+    if app_name:
+        speak(f"Do you want me to open {app_name}? Say open {app_name}.")
+        return True
 
     # Fallback
-    else:
-        speak("I do not understand that command yet.")
-
+    speak("I do not understand that command yet.")
     return True
 
 
 def show_help():
     print("""
-Commands you can try:
+Natural commands you can try:
 
 1. jarvis hello
 2. jarvis what time is it
-3. jarvis what is the date
-4. jarvis open notepad
+3. jarvis tell me the current time
+4. jarvis what is today's date
 5. jarvis open calculator
-6. jarvis open vs code
-7. jarvis google Python tutorial
-8. jarvis youtube OpenCV hand tracking
-9. jarvis remember submit database lab tomorrow
-10. jarvis show tasks
-11. jarvis clear tasks
-12. jarvis start flower project
-13. jarvis open camera
-14. jarvis exit
+6. jarvis launch calculator
+7. jarvis start calculator
+8. jarvis run calculator
+9. jarvis please open vs code
+10. jarvis can you launch chrome for me
+11. jarvis open notepad
+12. jarvis open powershell
+13. jarvis open command prompt
+14. jarvis open camera
+15. jarvis look at camera
+16. jarvis start flower project
+17. jarvis run my hand flower project
+18. jarvis google Python tutorial
+19. jarvis search google for OpenCV hand tracking
+20. jarvis search YouTube for MediaPipe hand tracking
+21. jarvis remember submit database lab tomorrow
+22. jarvis note down finish computer architecture report
+23. jarvis save buy bread
+24. jarvis show tasks
+25. jarvis what are my tasks
+26. jarvis clear tasks
+27. jarvis what can you do
+28. jarvis exit
 """)
 
-    speak("I printed the command list.")
+    speak("I printed the natural command list.")
 
 
 # -----------------------------
